@@ -1,4 +1,4 @@
-require File.expand_path('../../spec_helper', __FILE__)
+require File.dirname(__FILE__) + '/../spec_helper'
 
 module Paperclip
   class Dummy < Processor
@@ -27,7 +27,7 @@ describe AssetType do
     its(:paperclip_processors) { should be_empty}
     its(:paperclip_styles) { should be_empty}
     its(:icon) { should == "/images/admin/assets/simple_icon.png"}
-    its(:icon_path) { should == Rails.root + "public/images/admin/assets/simple_icon.png"}
+    its(:icon_path) { should == "#{RAILS_ROOT}/public/images/admin/assets/simple_icon.png"}
   end
   
   context 'with initialized thumbnail sizes' do
@@ -35,21 +35,18 @@ describe AssetType do
     subject{ AssetType.find(:complex) }
     its(:paperclip_processors) { should == [:dummy] }
     its(:paperclip_styles) { should_not be_empty }
-    its(:paperclip_styles) { should == {:something => {:geometry => "99x99>"}} }
+    its(:paperclip_styles) { should == {:something => "99x99>"} }
     its(:icon) { should == "/images/admin/assets/document_icon.png"}
   end
 
   context 'with configured thumbnail sizes' do
     before { 
       Radiant.config["assets.create_configured_thumbnails?"] = true 
-      Radiant.config["assets.thumbnails.configured"] = "special:size=800x800>,format=jpg|tiny:size=10x10#,format=png"
+      Radiant.config["assets.thumbnails.configured"] = "special:size=800x800>,format=jpg|tiny:size=#10x10,format=png"
     }
     subject{ AssetType.find(:configured) }
     its(:paperclip_processors) { should == [:dummy] }
-    its(:paperclip_styles) { should == {
-      :special => {:geometry => "800x800>", :format => 'jpg'},
-      :tiny => {:geometry => "10x10#", :format => 'png'}
-    }}
+    its(:paperclip_styles) { should == {:special => ["800x800>", :jpg], :tiny => ["#10x10", :png]} }
   end
 
   context 'AssetType class methods' do

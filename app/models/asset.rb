@@ -1,13 +1,21 @@
 class Asset < ActiveRecord::Base
+
   has_many :page_attachments, :dependent => :destroy
   has_many :pages, :through => :page_attachments
-  has_site if respond_to? :has_site
+  has_site if respond_to? :has_site    
+  
+  # Folders 
+  belongs_to :folder
 
   belongs_to :created_by, :class_name => 'User'
   belongs_to :updated_by, :class_name => 'User'
-
-  default_scope :order => "created_at DESC"
-
+  
+  default_scope :order => "created_at DESC"    
+  
+  named_scope :of_folder, lambda { |folder_id| 
+    { :conditions => { :folder_id => folder_id }}  
+  }
+  
   named_scope :latest, lambda { |limit|
     { :order => "created_at DESC", :limit => limit }
   }
@@ -39,18 +47,15 @@ class Asset < ActiveRecord::Base
                       asset.paperclip_processors
                     },
                     :whiny => false,
-                    :storage => RadiantClippedExtension::Cloud.storage ||
-                                :filesystem,
-                    :path => Radiant.config["paperclip.path"],
-                    :url  => Radiant.config["paperclip.url"],
-                    :fog_credentials  => RadiantClippedExtension::Cloud.credentials,
-                    :fog_directory    => Radiant.config["paperclip.fog.directory"] ||
-                                         Radiant.config["paperclip.s3.bucket"],
-                    :fog_public       => Radiant.config["paperclip.fog.public?"]   ||
-                                         true,
-                    :fog_host         => Radiant.config["paperclip.fog.host"]      ||
-                                         "http://#{Radiant.config['paperclip.s3.host_alias']}" ||
-                                         "http://#{Radiant.config['paperclip.url']}"
+                    :storage => Radiant.config["paperclip.storage"] == "s3" ? :s3 : :filesystem,
+                    :s3_credentials => {
+                      :access_key_id     => Radiant.config["paperclip.s3.key"],
+                      :secret_access_key => Radiant.config["paperclip.s3.secret"]
+                    },
+                    :s3_host_alias => Radiant.config["paperclip.s3.host_alias"] || Radiant.config["assets.s3.bucket"],
+                    :bucket => Radiant.config["paperclip.s3.bucket"],
+                    :url => Radiant.config["paperclip.url"],
+                    :path => Radiant.config["paperclip.path"]
 
   before_save :assign_title
   before_save :assign_uuid
@@ -74,8 +79,8 @@ class Asset < ActiveRecord::Base
     return asset_type.icon(style_name)
   end
 
-  def has_style?(style_name='original')
-    style_name == 'original' || paperclip_styles.keys.include?(style_name.to_sym)
+  def has_style?(style_name)
+    paperclip_styles.keys.include?(style_name.to_sym)
   end
 
   def basename
@@ -105,61 +110,50 @@ class Asset < ActiveRecord::Base
   end
   
   def geometry(style_name='original')
-    raise Paperclip::StyleError, "Requested style #{style_name} is not defined for this asset." unless has_style?(style_name)
-    @geometry ||= {}
-    begin
-      @geometry[style_name] ||= if style_name.to_s == 'original'
-        original_geometry
-      else
-        style = self.asset.styles[style_name.to_sym]
-        original_geometry.transformed_by(style.geometry)    # this can return dimensions for fully specified style sizes but not for relative sizes when there are no original dimensions
-      end
-    rescue Paperclip::TransformationError => e
-      Rails.logger.warn "geometry transformation error: #{e}"
-      original_geometry                                     # returns a blank geometry if the real geometry cannot be calculated
+    if style_name == 'original'
+      original_geometry
+    elsif style = asset.styles[style_name.to_sym]   # asset.styles is normalised, but self.paperclip_styles is not
+      original_geometry.transformed_by(style.geometry)
     end
   end
 
   def aspect(style_name='original')
-    geometry(style_name).aspect
+    image? && geometry(style_name).aspect
   end
 
   def orientation(style_name='original')
-    a = aspect(style_name)
-    case
-    when a == nil?
-      'unknown'
-    when a < 1.0 
-      'vertical'
-    when a > 1.0 
-      'horizontal'
-    else
-      'square'
+    if image?
+      this_aspect = aspect(style_name)
+      case 
+        when this_aspect < 1.0 then 'vertical'
+        when this_aspect > 1.0 then 'horizontal'
+        else 'square'
+      end
     end
   end
 
   def width(style_name='original')
-    geometry(style_name).width.to_i
+    image? ? geometry(style_name).width.to_i : 0
   end
 
   def height(style_name='original')
-    geometry(style_name).height.to_i
+    image? ? geometry(style_name).height.to_i : 0
   end
 
   def square?(style_name='original')
-    geometry(style_name).square?
+    image? && geometry(style_name).square?
   end
 
   def vertical?(style_name='original')
-    geometry(style_name).vertical?
+    image? && geometry(style_name).vertical?
   end
 
   def horizontal?(style_name='original')
-    geometry(style_name).horizontal?
+    image? && geometry(style_name).horizontal?
   end
   
   def dimensions_known?
-    original_width? && original_height?
+    !original_width.blank? && !original_height.blank?
   end
   
 private
@@ -181,11 +175,11 @@ private
   end
 
   def assign_title
-    self.title = basename unless title?
+    self.title = basename if title.blank?
   end
   
   def assign_uuid
-    self.uuid = UUIDTools::UUID.timestamp_create.to_s unless uuid?
+    self.uuid = UUIDTools::UUID.timestamp_create.to_s if uuid.blank?
   end
   
   class << self

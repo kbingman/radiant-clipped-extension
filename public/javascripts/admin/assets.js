@@ -89,8 +89,7 @@ Asset.Detach = Behavior.create({
 Asset.Insert = Behavior.create({
   onclick: function(e) {
     if (e) e.stop();
-    var part_name = TabControlBehavior.instances[0].controller.selected.caption.toLowerCase();
-    if (part_name.indexOf(' ')) part_name = part_name.replace(' ', '-'); 
+    var part_name = TabControlBehavior.instances[0].controller.selected.caption;
     var textbox = $('part_' + part_name + '_content');
     var tag_parts = this.element.getAttribute('rel').split('_');
     var tag_name = tag_parts[0];
@@ -168,7 +167,7 @@ Asset.MakeSortable = function (element) {
   var sorter = Sortable.create(element, {
     overlap: 'horizontal',
     constraint: false,
-    handle: 'back',
+    handle: 'title',
     onChange: function (e) { 
       Asset.SetPositions();
       Asset.Notify('Assets reordered. Save page to commit changes.'); 

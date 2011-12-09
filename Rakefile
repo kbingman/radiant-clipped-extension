@@ -12,7 +12,7 @@ unless defined? RADIANT_ROOT
 end
 
 require 'rake'
-require 'rdoc/task'
+require 'rake/rdoctask'
 require 'rake/testtask'
 
 rspec_base = File.expand_path(RADIANT_ROOT + '/vendor/plugins/rspec/lib')
@@ -97,7 +97,7 @@ namespace :spec do
 end
 
 desc 'Generate documentation for the clipped extension.'
-RDoc::Task.new(:rdoc) do |rdoc|
+Rake::RDocTask.new(:rdoc) do |rdoc|
   rdoc.rdoc_dir = 'rdoc'
   rdoc.title    = 'ClippedExtension'
   rdoc.options << '--line-numbers' << '--inline-source'
