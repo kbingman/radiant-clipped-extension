@@ -20,6 +20,13 @@ en:
           attributes:
             asset:
               blank: 'You must choose a file to upload!'
+  clipped_folders:
+    new_folder: New Folder
+    create_folder: Create Folder
+    edit_folder: Edit Folder
+    remove_folder: Remove Folder
+    remove_warning: Are you sure you want to delete this folder and all of its contents?
+    delete_folder: Delete Folder
 
   clipped_extension:
     actions: Actions

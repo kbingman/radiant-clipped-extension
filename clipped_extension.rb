@@ -33,12 +33,18 @@ class ClippedExtension < Radiant::Extension
       AssetType.new :document, :icon => 'document', :mime_types => %w[application/msword application/rtf application/vnd.ms-excel application/vnd.ms-powerpoint application/vnd.ms-project application/vnd.ms-works text/plain text/html]
       AssetType.new :other, :icon => 'unknown'
     
+      admin.folder ||= Radiant::AdminUI.load_default_folder_regions  
       admin.asset ||= Radiant::AdminUI.load_default_asset_regions                        # loads the shards defined in AssetsAdminUI
       admin.page.edit.add :form, 'assets', :after => :edit_page_parts                    # adds the asset-attachment picker to the page edit view
       admin.page.edit.add :main, 'asset_popups', :after => :edit_popups                  # adds the asset-attachment picker to the page edit view
       admin.page.edit.asset_popups.concat %w{upload_asset attach_asset}
       admin.configuration.show.add :config, 'admin/configuration/show', :after => 'defaults'
       admin.configuration.edit.add :form,   'admin/configuration/edit', :after => 'edit_defaults'
+      
+      
+
+      Admin::PagesController.send :helper, Admin::FoldersHelper    
+      Admin::AssetsController.send :helper, Admin::FoldersHelper
     
       if Radiant::Config.table_exists? && Radiant::config["paperclip.command_path"]    # This is needed for testing if you are using mod_rails
         Paperclip.options[:command_path] = Radiant::config["paperclip.command_path"]
