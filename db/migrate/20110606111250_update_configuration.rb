@@ -4,7 +4,13 @@ class UpdateConfiguration < ActiveRecord::Migration
 
       puts "Importing paperclip configuration"
       %w{url path skip_filetype_validation storage}.select{|k| !!Radiant.config["assets.#{k}"] }.each do |k|
-        Radiant.config["paperclip.#{k}"] = Radiant.config["assets.#{k}"]
+        begin
+          Radiant.config["paperclip.#{k}"] = Radiant.config["assets.#{k}"]
+        rescue ActiveRecord::RecordInvalid => e
+          print "Oops! There was trouble setting #{k} to '#{Radiant.config["assets.#{k}"]}'"
+          print "\nSetting it to 'fog'. Please see the clipped extension README for more details."
+          Radiant.config["paperclip.#{k}"] = 'fog'
+        end
       end
 
       puts "Importing s3 storage configuration"
