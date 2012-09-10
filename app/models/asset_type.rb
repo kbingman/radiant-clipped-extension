@@ -99,11 +99,10 @@ class AssetType
   end
   
   def configured_styles
-    styles = {}
-    if style_definitions = Radiant.config["assets.thumbnails.#{name}"]
-      style_definitions.to_s.gsub(' ','').split('|').each do |definition|
+    @configured_styles ||= if style_definitions = Radiant.config["assets.thumbnails.#{name}"]
+      style_definitions.split('|').each_with_object({}) do |definition, styles|
         name, rule = definition.split(':')
-        styles[name.to_sym] = rule.split(',').collect{|option| option.split('=')}.inject({}) {|h, (k, v)| h[k.to_sym] = v; h}
+        styles[name.strip.to_sym] = rule.to_s.strip
       end
     end
     styles

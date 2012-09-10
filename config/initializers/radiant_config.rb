@@ -9,10 +9,15 @@ Radiant.config do |config|
                          :allow_display => false
                          
     pc.namespace 's3' do |s3|
-      s3.define 'bucket'
       s3.define 'key'
       s3.define 'secret'
-      s3.define 'host_alias'
+      s3.define 'region', :select_from => {
+                            'Asia North East' => 'ap-northeast-1',
+                            'Asia South East' => 'ap-southeast-1',
+                            'EU West' => 'eu-west-1',
+                            'US East' => 'us-east-1',
+                            'US West' => 'us-west-1'
+                          }
     end
   end
 

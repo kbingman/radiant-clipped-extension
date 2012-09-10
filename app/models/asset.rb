@@ -47,15 +47,13 @@ class Asset < ActiveRecord::Base
                       asset.paperclip_processors
                     },
                     :whiny => false,
-                    :storage => Radiant.config["paperclip.storage"] == "s3" ? :s3 : :filesystem,
-                    :s3_credentials => {
-                      :access_key_id     => Radiant.config["paperclip.s3.key"],
-                      :secret_access_key => Radiant.config["paperclip.s3.secret"]
-                    },
-                    :s3_host_alias => Radiant.config["paperclip.s3.host_alias"] || Radiant.config["assets.s3.bucket"],
-                    :bucket => Radiant.config["paperclip.s3.bucket"],
+                    :storage => Radiant.config["paperclip.storage"],
+                    :path => Radiant.config["paperclip.path"],
                     :url => Radiant.config["paperclip.url"],
-                    :path => Radiant.config["paperclip.path"]
+                    :fog_credentials => RadiantClippedExtension::Cloud.credentials,
+                    :fog_directory => Radiant.config["paperclip.fog.directory"],
+                    :fog_public => Radiant.config["paperclip.fog.public?"] || true,
+                    :fog_host => RadiantClippedExtension::Cloud.host
 
   before_save :assign_title
   before_save :assign_uuid
