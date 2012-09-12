@@ -39,18 +39,18 @@ describe AssetType do
     its(:icon) { should == "/images/admin/assets/document_icon.png"}
   end
 
-  describe 'with size=original' do
-    it 'should return paperclip asset url for image' do
-      image = new_asset :asset_content_type => 'image/jpeg'
-      image.stub! :asset => mock('asset', :url => '/y/z/e.jpg')
-      image.thumbnail('original').should == '/y/z/e.jpg'
-    end
-      
-    it 'should return paperclip asset url for non-image' do
-      asset = new_asset :asset_content_type => 'application/pdf'
-      asset.stub! :asset => mock('asset', :url => '/y/z/e.pdf')
-      asset.thumbnail('original').should == '/y/z/e.pdf'
-    end
+  context 'with configured thumbnail sizes' do
+    before { 
+      Radiant.config["assets.create_configured_thumbnails?"] = true 
+      Radiant.config["assets.thumbnails.configured"] = "special:size=800x800>,format=jpg|tiny:size=10x10#,format=png|custom:size=1x1,convert_options=-quality 33 -interlace Plane"
+    }
+    subject{ AssetType.find(:configured) }
+    its(:paperclip_processors) { should == [:dummy] }
+    its(:paperclip_styles) { should == {
+      :special => {:geometry => "800x800>", :format => 'jpg'},
+      :tiny => {:geometry => "10x10#", :format => 'png'},
+      :custom => {:geometry => "1x1", :convert_options => '-quality 33 -interlace Plane'}
+    }}
   end
 
   context 'AssetType class methods' do

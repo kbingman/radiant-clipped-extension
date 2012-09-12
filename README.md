@@ -21,12 +21,6 @@ Please file bugs and feature requests on [Github][issues]. If you have questions
 * In-page and dedicated management interfaces
 * Easily to extended with new asset types and processors
 
-At the moment I think uploads probably don't work in IE7. See github for more issues.
-
-## Requirements
-
-The `paperclip`, `uuidtools` and `acts_as_list` gems are required. For S3 storage you need the `aws-s3` gem.
-
 ## Installation
 
 If you installed the Radiant gem then you already have Clipped installed. You can upgrade to a newer version using `bundle update radiant-clipped-extension`.

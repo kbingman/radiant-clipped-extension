@@ -40,20 +40,21 @@ class Asset < ActiveRecord::Base
   }
     
   has_attached_file :asset,
-                     :styles => lambda { |attachment|
-                       AssetType.for(attachment).paperclip_styles
-                     },
-                     :processors => lambda { |asset|
-                       asset.paperclip_processors
-                     },
-                     :whiny => false,
-                     :storage => Radiant.config["paperclip.storage"],
-                     :path => Radiant.config["paperclip.path"],
-                     :url => Radiant.config["paperclip.url"],
-                     :fog_credentials => RadiantClippedExtension::Cloud.credentials,
-                     :fog_directory => Radiant.config["paperclip.fog.directory"],
-                     :fog_public => Radiant.config["paperclip.fog.public?"] || true,
-                     :fog_host => RadiantClippedExtension::Cloud.host
+                    :styles => lambda { |attachment|
+                      AssetType.for(attachment).paperclip_styles
+                    },
+                    :processors => lambda { |asset|
+                      asset.paperclip_processors
+                    },
+                    :whiny => false,
+                    :storage => Radiant.config["paperclip.storage"],
+                    :path => Radiant.config["paperclip.path"],
+                    :url => Radiant.config["paperclip.url"],
+                    :fog_credentials => RadiantClippedExtension::Cloud.credentials,
+                    :fog_directory => Radiant.config["paperclip.fog.directory"],
+                    :fog_public => Radiant.config["paperclip.fog.public?"] || true,
+                    :fog_host => RadiantClippedExtension::Cloud.host
+
 
   before_save :assign_title
   before_save :assign_uuid
