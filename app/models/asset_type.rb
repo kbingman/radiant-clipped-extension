@@ -23,6 +23,7 @@ class AssetType
     @icon_name = options[:icon] || name
     @processors = options[:processors] || []
     @styles = options[:styles] || {}
+    @styles = standard_styles if @styles == :standard
     @default_radius_tag = options[:default_radius_tag] || 'link'
     @extensions = options[:extensions] || []
     @extensions.each { |ext| @@extension_lookup[ext] ||= self }
@@ -36,7 +37,7 @@ class AssetType
     Asset.send :named_scope, plural.to_sym, :conditions => condition
     Asset.send :named_scope, "not_#{plural}".to_sym, :conditions => non_condition
     
-    # Page.define_radius_tags_for_asset_type self     #TODO discuss interface
+    self.define_radius_tags
     @@types.push self
     @@type_lookup[@name] = self
   end
@@ -46,7 +47,7 @@ class AssetType
   end
 
   def icon(style_name='icon')
-    if File.exist?("#{RAILS_ROOT}/public/images/admin/assets/#{icon_name}_#{style_name.to_s}.png")
+    if File.exist?(Rails.root + "public/images/admin/assets/#{icon_name}_#{style_name.to_s}.png")
       return "/images/admin/assets/#{icon_name}_#{style_name.to_s}.png"
     else
       return "/images/admin/assets/#{icon_name}_icon.png"
@@ -54,7 +55,7 @@ class AssetType
   end
   
   def icon_path(style_name='icon')
-    "#{RAILS_ROOT}/public#{icon(style_name)}"
+    Rails.root + "public#{icon(style_name)}"
   end
   
   def condition
@@ -89,15 +90,59 @@ class AssetType
     Radiant.config["assets.create_#{name}_thumbnails?"] ? processors : []
   end
   
+  # Parses and combines the various ways in which paperclip styles can be defined, and normalises them into
+  # the format that paperclip expects. Note that :styles => :standard has already been replaced with the 
+  # results of a call to standard_styles.
+  # Styles are passed to paperclip as a hash and arbitrary keys can be passed through from configuration.
+  #
   def paperclip_styles
-    if paperclip_processors.any?
-      #TODO: define permitted options for each asset type and pass through that subset of the style-definition hash
-      @paperclip_styles ||= styles.reverse_merge(configured_styles.inject({}) {|h, (k, v)| h[k] =  v[:format].blank? ? v[:size] : [v[:size], v[:format].to_sym]; h})
+    # Styles are not relevant if processors are not defined.
+    # TODO: should this default to an icon set?
+    @paperclip_styles ||= if paperclip_processors.any?
+      normalize_style_rules(configured_styles.merge(styles))
     else
       {}
     end
+    @paperclip_styles
   end
   
+  # Takes a motley collection of differently-defined styles and renders them into the standard hash-of-hashes format.
+  # Solitary strings are assumed to be 
+  #TODO: define permitted and/or expected options for the asset type and pass through that subset of the style-definition hash
+  #
+  def normalize_style_rules(styles={})
+    styles.each_pair do |name, rule|
+      unless rule.is_a? Hash
+        if rule =~ /\=/
+          parameters = rule.split(',').collect{ |parameter| parameter.split('=') }              # array of pairs
+          rule = Hash[parameters].symbolize_keys                                     # into hash of :first => last
+        else
+          rule = {:geometry => rule}                                                 # simplest case: name:geom|name:geom
+        end
+      end
+      rule[:geometry] ||= rule.delete(:size)
+      styles[name.to_sym] = rule
+    end
+    styles
+  end
+  
+  def standard_styles
+    {
+      :native => { :geometry => "", :format => :jpg },
+      :icon => { :geometry => '42x42#', :format => :png },
+      :thumbnail => { :geometry => '100x100#', :format => :png }
+    }
+  end
+  
+  # Paperclip styles are defined in the config entry `assets.thumbnails.asset_type`, with the format:
+  # foo:key-x,key=y,key=z|bar:key-x,key=y,key=z
+  # where 'key' can be any parameter understood by your paperclip processors. Usually they include :geometry and :format.
+  # A typical entry would be:
+  #
+  #   standard:geometry=640x640>,format=jpg
+  #
+  # This method parses that string and returns the defined styles as a hash of style-defining strings that will later be normalized into hashes.
+  #
   def configured_styles
     @configured_styles ||= if style_definitions = Radiant.config["assets.thumbnails.#{name}"]
       style_definitions.split('|').each_with_object({}) do |definition, styles|
@@ -115,8 +160,20 @@ class AssetType
   
   def style_dimensions(style_name)
     if style = paperclip_styles[style_name.to_sym]
-      style.is_a?(Array) ? style.first : style
+      style[:size]
     end
+  end
+  
+  def define_radius_tags
+    type = self.name
+    Page.class_eval {
+      tag "asset:if_#{type}" do |tag|
+        tag.expand if find_asset(tag, tag.attr.dup).send("#{type}?".to_sym)
+      end
+      tag "asset:unless_#{type}" do |tag|
+        tag.expand unless find_asset(tag, tag.attr.dup).send("#{type}?".to_sym)
+      end
+    }
   end
   
   # class methods
