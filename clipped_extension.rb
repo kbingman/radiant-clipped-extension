@@ -15,6 +15,7 @@ class ClippedExtension < Radiant::Extension
     if Asset.table_exists?
       Page.send :include, PageAssetAssociations                                          # defines page-asset associations. likely to be generalised soon.
       Radiant::AdminUI.send :include, ClippedAdminUI unless defined? admin.asset         # defines shards for extension of the asset-admin interface
+      Radiant::AdminUI.send :include, ClippedFoldersAdminUI unless defined? admin.folder
       Admin::PagesController.send :helper, Admin::AssetsHelper                           # currently only provides a description of asset sizes
       Page.send :include, AssetTags                                                      # radius tags for selecting sets of assets and presenting each one
       UserActionObserver.instance.send :add_observer!, Asset                             # the usual creator- and updater-stamping
