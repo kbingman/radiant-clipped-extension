@@ -54,13 +54,13 @@ The clipped extension is configured in the usual way, but only its minor setting
 
 ### Structural settings
 
-* `clipped.url` sets the url scheme for attached files. Paperclip interpolations are applied. You probably don't want to change this.
-* `clipped.path` sets the path scheme for attached files. Paperclip interpolations are applied. You might conceivably want to change this.
-* `clipped.additional_thumbnails` is a string of comma-separated style definitions that is passed to paperclip for any asset type that has a post-processor (that is, currently, images, pdfs and video clips). The definitions are in the format name=geometry and when assembled the string will look something like `preview=640x640>,square=#260x260`. Thumbnail and icon styles are already defined and don't need to be configured this way.
-* `clipped.storage` can be 'filesystem' (the default) or 's3' for amazon's cloud service.
-* `clipped.skip_filetype_validation` is true by default and allows uploads of any mime type.
+* `paperclip.url` sets the url scheme for attached files. Paperclip interpolations are applied. You probably don't want to change this.
+* `paperclip.path` sets the path scheme for attached files. Paperclip interpolations are applied. You might conceivably want to change this.
+* `paperclip.additional_thumbnails` is a string of comma-separated style definitions that is passed to paperclip for any asset type that has a post-processor (that is, currently, images, pdfs and video clips). The definitions are in the format name=geometry and when assembled the string will look something like `preview=640x640>,square=#260x260`. Thumbnail and icon styles are already defined and don't need to be configured this way.
+* `paperclip.storage` can be 'filesystem' (the default) or 'fog' for cloud storage (such as s3).
+* `paperclip.skip_filetype_validation` is true by default and allows uploads of any mime type.
 
-If the storage option is set to 's3' then these settings are also required:
+### Cloud Storage
 
 Set `paperclip.storage` to 'fog' and add the following line to your `Gemfile`
 
@@ -91,17 +91,18 @@ If set to "Rackspace", provide the following:
 
 And optionally:
 
-* `clipped.s3.host_alias`
+* `paperclip.fog.host`
+* `paperclip.fog.public?`
 
 ### Configurable settings
 
 If you want to disable a whole category of post-processing, set one of these options to false:
 
-* `clipped.create_image_thumbnails?`
-* `clipped.create_video_thumbnails?`
-* `clipped.create_pdf_thumbnails?`
+* `assets.create_image_thumbnails?`
+* `assets.create_video_thumbnails?`
+* `assets.create_pdf_thumbnails?`
 
-If we can't find ffmpeg on initialization, video thumbnailing will be disabled automatically by setting `clipped.create_video_thumbnails?` to false.
+If we can't find ffmpeg on initialization, video thumbnailing will be disabled automatically by setting `assets.create_video_thumbnails?` to false.
 
 To set a threshold for the size of uploads permitted:
 

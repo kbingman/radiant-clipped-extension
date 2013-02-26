@@ -4,15 +4,9 @@ module Admin::AssetsHelper
     Asset.thumbnail_sizes.collect{|k,v| "#{k} (#{(v.to_s).match(/\d+x\d+/)})"}.join(', ')
   end
   
-  # def asset_insertion_link(asset)
-  #   radius_tag = asset.asset_type.default_radius_tag || 'link';
-  #   link_to t('clipped_extension.insert'), '#', :class => 'insert_asset', :rel => "#{radius_tag}_#{Radiant.config['assets.insertion_size']}_#{asset.id}"
-  # end
-  
   def asset_insertion_link(asset)
-    radius_tag = asset.asset_type.default_radius_tag || 'link'
-    display_size = Radiant::config['assets.display_size'] || 'normal' 
-    link_to t('clipped_extension.insert'), asset.thumbnail(display_size.to_sym), :class => 'insert_asset', :rel => "#{radius_tag}_#{Radiant.config['assets.insertion_size']}_#{asset.id}"
+    radius_tag = asset.asset_type.default_radius_tag || 'link';
+    link_to t('clipped_extension.insert'), '#', :class => 'insert_asset', :rel => "#{radius_tag}_#{Radiant.config['assets.insertion_size']}_#{asset.id}"
   end
   
   def asset_attachment_link(asset)

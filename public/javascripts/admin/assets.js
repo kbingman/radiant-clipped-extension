@@ -86,97 +86,22 @@ Asset.Detach = Behavior.create({
   }
 });
 
-// Asset.Insert = Behavior.create({
-//   onclick: function(e) {
-//     if (e) e.stop();
-//     var part_name = TabControlBehavior.instances[0].controller.selected.caption;
-//     var textbox = $('part_' + part_name + '_content');
-//     var tag_parts = this.element.getAttribute('rel').split('_');
-//     var tag_name = tag_parts[0];
-//     var asset_size = tag_parts[1];
-//     var asset_id = tag_parts[2];
-//     var radius_tag = '<r:asset:' + tag_name;
-//     if (asset_size != '') radius_tag = radius_tag + ' size="' + asset_size + '"';
-//     radius_tag =  radius_tag +' id="' + asset_id + '" />';
-//     Asset.InsertAtCursor(textbox, radius_tag);
-//   }
-// });  
-
 Asset.Insert = Behavior.create({
   onclick: function(e) {
     if (e) e.stop();
-    var part_name = TabControlBehavior.instances[0].controller.selected.caption;
-    var textbox = $('part_' + part_name + '_content');  
+    var part_name = TabControlBehavior.instances[0].controller.selected.caption.toLowerCase();
+    if (part_name.indexOf(' ')) part_name = part_name.replace(' ', '-'); 
+    var textbox = $('part_' + part_name + '_content');
     var tag_parts = this.element.getAttribute('rel').split('_');
     var tag_name = tag_parts[0];
     var asset_size = tag_parts[1];
     var asset_id = tag_parts[2];
-    var radius_tag = '<r:asset:' + tag_name;   
-    if(textbox.className != 'image_part'){
-      if (asset_size != '') radius_tag = radius_tag + ' size="' + asset_size + '"';
-      radius_tag =  radius_tag +' id="' + asset_id + '" />';
-      Asset.InsertAtCursor(textbox, radius_tag); 
-    }else{      
-      var image_path = e.element().href;  
-      var image_holder = $('part_' + part_name + '_image');   
-      image_holder.update('<img src=' + image_path + ' alt=' + part_name + '/>');        
-      textbox.value = asset_id; 
-      Popup.closeAll();
-    }
-  }
-}); 
-
-Asset.Draggable = Behavior.create({
-  initialize: function (e) {
-    this.dragger = Asset.MakeDraggable(this.element);
+    var radius_tag = '<r:asset:' + tag_name;
+    if (asset_size != '') radius_tag = radius_tag + ' size="' + asset_size + '"';
+    radius_tag =  radius_tag +' id="' + asset_id + '" />';
+    Asset.InsertAtCursor(textbox, radius_tag);
   }
 });
-
-Asset.MakeDraggable = function (element) {     
-  var dragger = new Draggable(element, { 
-    handle: 'title',  
-    revert: true,
-    onDrag: function(draggable){
-      // var parent = $$('li.parent').first();
-      // parent.show();
-    }
-  });
-  element.addClassName('draggable');
-  // Asset.SetPositions();
-  return dragger;
-}   
-
-Asset.Droppable = Behavior.create({
-  initialize: function (e) {
-    this.dropper = Asset.MakeDroppable(this.element);
-  }
-});
-
-Asset.MakeDroppable = function (element) {     
-  var dragger = Droppables.add(element, { 
-    onDrop: function(draggable){  
-      var folder_id = element.id.split('_').last();
-      var asset_path = '/admin/assets/' + draggable.id.split('_').last();
-      var params = '_method=put&asset[folder_id]=' + folder_id;  
-
-      $(draggable.id).hide();  
-      
-      new Ajax.Request(asset_path, {
-        asynchronous: true, 
-        method: 'put',      
-        parameters: params,
-        onSuccess: function() { 
-          
-        }
-      });
-    }
-  });
-  element.addClassName('draggable');
-  // Asset.SetPositions();
-  return dragger;
-}
-
-// End Changes
 
 Asset.Sortable = Behavior.create({
   initialize: function (e) {
@@ -243,7 +168,7 @@ Asset.MakeSortable = function (element) {
   var sorter = Sortable.create(element, {
     overlap: 'horizontal',
     constraint: false,
-    handle: 'title',
+    handle: 'back',
     onChange: function (e) { 
       Asset.SetPositions();
       Asset.Notify('Assets reordered. Save page to commit changes.'); 
@@ -368,20 +293,5 @@ Event.addBehavior({
   'a.deselective': Asset.DeselectFileTypes,
   'a.selective': Asset.SelectFileType,
   'form.search': Asset.SearchForm,
-  '#assets_table .pagination a': Asset.Pagination, 
-  // Changes
-  '#assets_table .asset': Asset.Draggable, 
-  '#assets_table .folder': Asset.Droppable,
-  'input#folder_name': function() {
-    var name = this;
-    var slug = $('folder_slug');
-    var oldName = name.value;
-    
-    if (!slug) return;
-    
-    new Form.Element.Observer(name, 0.15, function() {
-      if (oldName.toSlug() == slug.value) slug.value = name.value.toSlug();
-      oldName = name.value;
-    });
-  },
+  '#assets_table .pagination a': Asset.Pagination
 });

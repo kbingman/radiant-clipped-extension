@@ -7,11 +7,6 @@ module AssetTags
     deprecated_tag "assets:#{name}", :substitute => "asset:#{name}", :deadline => '2.0'
   end
   
-  Asset.known_types.each do |known_type|
-    deprecated_tag "assets:if_#{known_type}", :substitute => "asset:if_#{known_type}", :deadline => '2.0'
-    deprecated_tag "assets:unless_#{known_type}", :substitute => "asset:unless_#{known_type}", :deadline => '2.0'
-  end
-  
   desc %{
     The namespace for referencing images and assets.
     
@@ -20,7 +15,12 @@ module AssetTags
   }    
   tag 'asset' do |tag|
     tag.locals.asset = find_asset unless tag.attr.empty?
-    tag.expand
+    begin
+      tag.expand
+    rescue Paperclip::StyleError => e
+      Rails.logger.warn "style processing error with asset ##{tag.locals.asset.id}: #{e}"
+      raise TagError, e
+    end
   end
 
   desc %{
@@ -38,7 +38,6 @@ module AssetTags
   end
   tag 'assets:each' do |tag|
     options = tag.attr.dup
-    result = []
     tag.locals.assets = tag.locals.page.assets.scoped(assets_find_options(tag))
     tag.render('asset_list', tag.attr.dup, &tag.block)
   end
@@ -49,7 +48,7 @@ module AssetTags
   tag 'asset_list' do |tag|
     raise TagError, "r:asset_list: no assets to list" unless tag.locals.assets
     options = tag.attr.symbolize_keys
-    result = []
+    result = ""
     paging = pagination_find_options(tag)
     assets = paging ? tag.locals.assets.paginate(paging) : tag.locals.assets.all
     assets.each do |asset|
@@ -112,9 +111,9 @@ module AssetTags
 
 
   desc %{
-    Renders the value for a top padding for the image. Put the image in a
+    Renders the value for a top padding for a thumbnail. Put the thumbnail in a
     container with specified height and using this tag you can vertically
-    align the image within it's container.
+    align the image within its container.
   
     *Usage*:
     <pre><code><r:asset:top_padding container = "140" [size="icon"]/></code></pre>
@@ -133,12 +132,11 @@ module AssetTags
   }
   tag 'asset:top_padding' do |tag|
     asset, options = asset_and_options(tag)
-    raise TagError, 'Asset is not an image' unless asset.image?
     raise TagError, "'container' attribute required" unless options['container']
     size = options['size'] ? options.delete('size') : 'icon'
+    raise TagError, "asset #{tag.locals.asset.title} has no '#{size}' thumbnail" unless tag.locals.asset.has_style?(size)
     container = options.delete('container')
-    img_height = asset.height(size)
-    (container.to_i - img_height.to_i)/2
+    ((container.to_i - asset.height(size).to_i)/2).to_s
   end
     
   ['height','width'].each do |dimension|
@@ -156,12 +154,14 @@ module AssetTags
   end
 
   desc %{
-    Returns a string representing the orientation of the asset, which must be an image. Can be 'horizontal', 'vertical' or 'square'.
+    Returns a string representing the orientation of the asset, which must be imageable. 
+    (ie, it is an image or it has been processed to produce an image). 
+    Can be 'horizontal', 'vertical' or 'square'.
   }
   tag 'asset:orientation' do |tag|
     asset, options = asset_and_options(tag)
-    raise TagError, 'Asset is not an image' unless asset.image?
     size = options['size'] ? options.delete('size') : 'original'
+    raise TagError, "asset #{tag.locals.asset.title} has no '#{size}' thumbnail" unless tag.locals.asset.has_style?(size)
     asset.orientation(size)
   end
 
@@ -170,8 +170,8 @@ module AssetTags
   }
   tag 'asset:aspect' do |tag|
     asset, options = asset_and_options(tag)
-    raise TagError, 'Asset is not an image' unless asset.image?
     size = options['size'] ? options.delete('size') : 'original'
+    raise TagError, "asset #{tag.locals.asset.title} has no '#{size}' thumbnail" unless tag.locals.asset.has_style?(size)
     asset.aspect(size)
   end
 
@@ -195,21 +195,6 @@ module AssetTags
   end
   
   #TODO: could use better docs for Asset#other? case explaining what types it covers
-  Asset.known_types.each do |known_type|
-    desc %{
-      Renders the contents only of the asset is of the type #{known_type}
-    }
-    tag "asset:if_#{known_type}" do |tag|
-      tag.expand if find_asset(tag, tag.attr.dup).send("#{known_type}?".to_sym)
-    end
-
-    desc %{
-      Renders the contents only of the asset is not of the type #{known_type}
-    }
-    tag "asset:unless_#{known_type}" do |tag|
-      tag.expand unless find_asset(tag, tag.attr.dup).send("#{known_type}?".to_sym)
-    end
-  end
   
   [:title, :caption, :asset_file_name, :extension, :asset_content_type, :asset_file_size, :id].each do |method|
     desc %{
@@ -235,22 +220,19 @@ module AssetTags
     
     Using the optional @size@ attribute, different sizes can be display.
     "thumbnail" and "icon" sizes are built in, but custom ones can be set
-    using by changing assets.addition_thumbnails in the Radiant::Config
-    settings.
+    by changing `assets.thumbnails.[type]` in the Radiant::Config settings.
     
     *Usage:* 
     <pre><code><r:asset:image [name="asset name" or id="asset id"] [size="icon|thumbnail|whatever"]></code></pre>
   }    
   tag 'asset:image' do |tag|
     tag.locals.asset, options = asset_and_options(tag)
-    if tag.locals.asset.image?
-      size = options['size'] ? options.delete('size') : 'original'
-      alt = "alt='#{tag.locals.asset.title}'" unless tag.attr['alt']
-      attributes = options.inject('') { |s, (k, v)| s << %{#{k.downcase}="#{v}" } }.strip
-      attributes << alt unless alt.nil?
-      url = tag.locals.asset.thumbnail(size)
-      %{<img src="#{url}" #{attributes unless attributes.empty?} />} rescue nil
-    end
+    size = options.delete('size') || 'original'
+    raise TagError, "asset #{tag.locals.asset.title} has no '#{size}' thumbnail" unless tag.locals.asset.has_style?(size)
+    options['alt'] ||= tag.locals.asset.title
+    attributes = options.inject('') { |s, (k, v)| s << %{#{k.downcase}="#{v}" } }.strip
+    url = tag.locals.asset.thumbnail(size)
+    %{<img src="#{url}" #{attributes} />} rescue nil
   end
   
   desc %{
@@ -309,7 +291,7 @@ module AssetTags
     attributes = " #{attributes}" unless attributes.empty?
     text = tag.double? ? tag.expand : text
     url = asset.thumbnail(size)
-    %{<a href="#{url}#{anchor}"#{attributes}>#{text}</a>} rescue nil
+    %{<a href="#{url  }#{anchor}"#{attributes}>#{text}</a>} rescue nil
   end
     
 private
