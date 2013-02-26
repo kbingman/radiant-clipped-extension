@@ -33,8 +33,10 @@
         = render :partial => 'admin/assets/search'
       
       #assets_table.assets.viewport{:style=>"height: 320px; width: 610px"}
-        - assets = Asset.all.paginate(:per_page => 20)
-        = render :partial => 'admin/assets/asset_table', :locals => {:assets => assets, :with_pagination => true}
+        - assets = Asset.all(:conditions => { :folder_id => nil }).paginate(:per_page => 20)
+        - folders = Folder.all(:conditions => { :parent_id => nil })
+        =# render :partial => 'admin/assets/asset_table', :locals => {:assets => assets, :with_pagination => true} 
+        = render :partial => 'admin/folders/folder_grid', :locals => { :folders => folders, :assets => assets } 
     
       .busy{:style => "display: none"}= image('spinner.gif', :alt => "")
       .buttons

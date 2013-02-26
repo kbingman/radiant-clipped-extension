@@ -1,13 +1,21 @@
 class Asset < ActiveRecord::Base
+
   has_many :page_attachments, :dependent => :destroy
   has_many :pages, :through => :page_attachments
-  has_site if respond_to? :has_site
+  has_site if respond_to? :has_site    
+  
+  # Folders 
+  belongs_to :folder
 
   belongs_to :created_by, :class_name => 'User'
   belongs_to :updated_by, :class_name => 'User'
-
-  default_scope :order => "created_at DESC"
-
+  
+  default_scope :order => "created_at DESC"    
+  
+  named_scope :of_folder, lambda { |folder_id| 
+    { :conditions => { :folder_id => folder_id }}  
+  }
+  
   named_scope :latest, lambda { |limit|
     { :order => "created_at DESC", :limit => limit }
   }
@@ -47,6 +55,7 @@ class Asset < ActiveRecord::Base
                     :fog_public => Radiant.config["paperclip.fog.public?"] || true,
                     :fog_host => RadiantClippedExtension::Cloud.host
 
+
   before_save :assign_title
   before_save :assign_uuid
   
@@ -69,8 +78,8 @@ class Asset < ActiveRecord::Base
     return asset_type.icon(style_name)
   end
 
-  def has_style?(style_name='original')
-    style_name == 'original' || paperclip_styles.keys.include?(style_name.to_sym)
+  def has_style?(style_name)
+    paperclip_styles.keys.include?(style_name.to_sym)
   end
 
   def basename
@@ -115,8 +124,9 @@ class Asset < ActiveRecord::Base
     end
   end
 
+
   def aspect(style_name='original')
-    geometry(style_name).aspect
+    image? && geometry(style_name).aspect
   end
 
   def orientation(style_name='original')
@@ -134,27 +144,27 @@ class Asset < ActiveRecord::Base
   end
 
   def width(style_name='original')
-    geometry(style_name).width.to_i
+    image? ? geometry(style_name).width.to_i : 0
   end
 
   def height(style_name='original')
-    geometry(style_name).height.to_i
+    image? ? geometry(style_name).height.to_i : 0
   end
 
   def square?(style_name='original')
-    geometry(style_name).square?
+    image? && geometry(style_name).square?
   end
 
   def vertical?(style_name='original')
-    geometry(style_name).vertical?
+    image? && geometry(style_name).vertical?
   end
 
   def horizontal?(style_name='original')
-    geometry(style_name).horizontal?
+    image? && geometry(style_name).horizontal?
   end
   
   def dimensions_known?
-    original_width? && original_height?
+    !original_width.blank? && !original_height.blank?
   end
   
 private
@@ -176,11 +186,11 @@ private
   end
 
   def assign_title
-    self.title = basename unless title?
+    self.title = basename if title.blank?
   end
   
   def assign_uuid
-    self.uuid = UUIDTools::UUID.timestamp_create.to_s unless uuid?
+    self.uuid = UUIDTools::UUID.timestamp_create.to_s if uuid.blank?
   end
   
   class << self

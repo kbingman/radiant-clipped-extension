@@ -1,5 +1,6 @@
+= f.hidden_field :folder_id 
 = render_region :form_top
-- render_region :form do |form|
+- render_region :form do |form|    
   - form.edit_title do
     %p.title
       %label{ :for => "asset_title" }
@@ -17,5 +18,4 @@
               = f.text_field :caption, :class => 'textbox', :maxlength => 255 
           = render_region :extended_metadata, :locals => {:f => f}
       .drawer_handle
-        %a.toggle.more{:href=>'#attributes', :rel=>"toggle[attributes]"}
-          = t('more')
+        %a.toggle{:href=>'#attributes', :rel=>"toggle[attributes]", :class=>"#{(meta_errors? ? 'less' : 'more')}"}= meta_label

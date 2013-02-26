@@ -3,6 +3,10 @@ ActionController::Routing::Routes.draw do |map|
     admin.resources :assets, :collection => { :refresh => :get, :regenerate => :post }, :member => { :refresh => :put }
     admin.resources :page_attachments, :only => [:new]
     admin.resources :pages, :has_many => :page_attachments
+    admin.resources :folders do |folders|
+      folders.resources :children, :controller => "folders"
+      folders.resources :assets, :member => { :remove => :get }
+    end
   end
 end
 

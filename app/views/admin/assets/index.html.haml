@@ -1,19 +1,34 @@
 - include_stylesheet 'admin/assets'
 - include_javascript 'admin/assets'
 
-- content_for :toolbar do
-  = render 'search'
+- content_for :toolbar do   
+  - if @folder.nil?
+    = render 'admin/assets/search' 
+  - else  
+    #folder_path 
+      = link_to t('assets'), admin_assets_path 
+      = '/'  
+      - @folder.ancestors.each do |ancestor|
+        = link_to ancestor.name, admin_folder_assets_path(ancestor) 
+        = '/' 
+      = @folder.name
 
 .outset
   #assets_table.assets
-    = render :partial => 'asset_table', :locals => { :assets => @assets }
+    =#  render :partial => 'asset_table', :locals => { :assets => @assets } 
+    = render :partial => 'admin/folders/folder_grid', :locals => { :folders => @folders, :assets => @assets, :current_folder => @folder }
   %p{:style => 'clear: both; height: 2em'} &nbsp;
   
 - render_region :bottom do |bottom|
   #actions
     = pagination_for @assets, :depaginate => false
     %ul
-      %li= link_to((image('upload') + ' ' + t('clipped_extension.upload_asset')), new_admin_asset_path)
+      - unless @folder.nil?
+        %li= link_to((image('upload') + ' ' + t('clipped_extension.upload_asset')), new_admin_folder_asset_path(@folder))
+        %li= link_to((image('upload') + ' ' + t('clipped_folders.create_folder')), new_admin_folder_child_url(@folder))  
+      - else
+        %li= link_to((image('upload') + ' ' + t('clipped_extension.upload_asset')), new_admin_asset_path)
+        %li= link_to((image('upload') + ' ' + t('clipped_folders.create_folder')), new_admin_folder_path)
       - if current_user.admin?
         %li
           = link_to t('clipped_extension.regenerate_thumbnails'), refresh_admin_assets_path

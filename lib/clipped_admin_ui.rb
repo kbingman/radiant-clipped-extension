@@ -25,6 +25,7 @@ module ClippedAdminUI
             asset.remove = asset.index
           end
         end
+
     end
     
   end
